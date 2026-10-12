@@ -1,4 +1,7 @@
--- Services
+-- =========================================================
+--  SYLE DEX GUI MADE BY ZEN - DANDY'S WORLD AUTOMATION
+-- =========================================================
+
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -8,28 +11,29 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Automation Settings
-local AutoConfig = {
-    running = false,
-    collection_mode = "ALL", -- Options: "ALL", "IMPORTANT", "OFF"
-    current_floor = 1,
-    is_hiding = false,
-    underground_depth = 12,
+-- Configuration
+local Config = {
+    Running = false,
+    CollectionMode = "IMPORTANT", -- "IMPORTANT", "ALL", "OFF"
+    UndergroundDepth = 14,
+    ThreatRadius = 40,
+    HideDuration = 10,
+    CurrentFloor = 1
 }
 
--- Anti-AFK Protection
+-- Anti-AFK
 player.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
 end)
 
--- Robust Bulletproof Noclip
-local noclipConnection = nil
-local function toggleNoclip(state)
-    if state then
-        if noclipConnection then noclipConnection:Disconnect() end
-        noclipConnection = RunService.Stepped:Connect(function()
-            if AutoConfig.running and player.Character then
+-- Noclip Engine
+local noclipConn = nil
+local function setNoclip(enabled)
+    if enabled then
+        if noclipConn then noclipConn:Disconnect() end
+        noclipConn = RunService.Stepped:Connect(function()
+            if Config.Running and player.Character then
                 for _, part in ipairs(player.Character:GetDescendants()) do
                     if part:IsA("BasePart") then
                         part.CanCollide = false
@@ -42,31 +46,26 @@ local function toggleNoclip(state)
             end
         end)
     else
-        if noclipConnection then
-            noclipConnection:Disconnect()
-            noclipConnection = nil
+        if noclipConn then
+            noclipConn:Disconnect()
+            noclipConn = nil
         end
     end
 end
 
--- Create ScreenGui
+-- UI Setup
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SyleDexGui"
+screenGui.Name = "SyleDexGui_Zen"
 screenGui.ResetOnSpawn = false
 
-local success = pcall(function()
-    screenGui.Parent = CoreGui
-end)
-if not success then
-    screenGui.Parent = playerGui
-end
+pcall(function() screenGui.Parent = CoreGui end)
+if not screenGui.Parent then screenGui.Parent = playerGui end
 
--- Main Container Frame
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 160, 0, 165)
+mainFrame.Size = UDim2.new(0, 200, 0, 210)
 mainFrame.Position = UDim2.new(0, 20, 0, 50)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = screenGui
 
@@ -74,167 +73,134 @@ local frameCorner = Instance.new("UICorner")
 frameCorner.CornerRadius = UDim.new(0, 10)
 frameCorner.Parent = mainFrame
 
--- Title Label
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Name = "TitleLabel"
-titleLabel.Size = UDim2.new(1, 0, 0, 30)
-titleLabel.Position = UDim2.new(0, 0, 0, 5)
+titleLabel.Size = UDim2.new(1, 0, 0, 32)
+titleLabel.Position = UDim2.new(0, 0, 0, 4)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "syle dex gui"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 16
+titleLabel.Text = "syle dex gui made by zen"
+titleLabel.TextColor3 = Color3.fromRGB(0, 230, 150)
+titleLabel.TextSize = 13
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Parent = mainFrame
 
--- 1. Autofarm Toggle Button
-local toggleButton = Instance.new("TextButton")
-toggleButton.Name = "ToggleButton"
-toggleButton.Size = UDim2.new(0, 140, 0, 34)
-toggleButton.Position = UDim2.new(0, 10, 0, 40)
-toggleButton.BackgroundColor3 = Color3.fromRGB(120, 30, 30)
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.TextSize = 14
-toggleButton.Font = Enum.Font.GothamBold
-toggleButton.Text = "autofarm OFF"
-toggleButton.Parent = mainFrame
+-- 1. Main Autofarm Button
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 180, 0, 36)
+toggleBtn.Position = UDim2.new(0, 10, 0, 40)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(120, 35, 35)
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.TextSize = 13
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Text = "Autofarm: OFF"
+toggleBtn.Parent = mainFrame
 
-local uiCorner1 = Instance.new("UICorner")
-uiCorner1.CornerRadius = UDim.new(0, 8)
-uiCorner1.Parent = toggleButton
+local c1 = Instance.new("UICorner")
+c1.CornerRadius = UDim.new(0, 8)
+c1.Parent = toggleBtn
 
-toggleButton.MouseButton1Click:Connect(function()
-    AutoConfig.running = not AutoConfig.running
-    if AutoConfig.running then
-        toggleButton.Text = "autofarm ON"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-        toggleNoclip(true)
-        print("[syle dex gui] Underground Autofarm Enabled")
+toggleBtn.MouseButton1Click:Connect(function()
+    Config.Running = not Config.Running
+    if Config.Running then
+        toggleBtn.Text = "Autofarm: ACTIVE"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+        setNoclip(true)
     else
-        toggleButton.Text = "autofarm OFF"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(120, 30, 30)
-        toggleNoclip(false)
-        print("[syle dex gui] Autofarm Disabled")
+        toggleBtn.Text = "Autofarm: OFF"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(120, 35, 35)
+        setNoclip(false)
     end
 end)
 
--- 2. Collection Mode Cycle Button (ALL -> IMPORTANT -> OFF)
-local collectionButton = Instance.new("TextButton")
-collectionButton.Name = "CollectionButton"
-collectionButton.Size = UDim2.new(0, 140, 0, 34)
-collectionButton.Position = UDim2.new(0, 10, 0, 80)
-collectionButton.BackgroundColor3 = Color3.fromRGB(35, 100, 35)
-collectionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-collectionButton.TextSize = 12
-collectionButton.Font = Enum.Font.GothamBold
-collectionButton.Text = "collection: ALL"
-collectionButton.Parent = mainFrame
+-- 2. Collection Mode Selector
+local collectBtn = Instance.new("TextButton")
+collectBtn.Size = UDim2.new(0, 180, 0, 36)
+collectBtn.Position = UDim2.new(0, 10, 0, 84)
+collectBtn.BackgroundColor3 = Color3.fromRGB(180, 130, 0)
+collectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+collectBtn.TextSize = 11
+collectBtn.Font = Enum.Font.GothamBold
+collectBtn.Text = "Mode: IMPORTANT ONLY"
+collectBtn.Parent = mainFrame
 
-local uiCornerColl = Instance.new("UICorner")
-uiCornerColl.CornerRadius = UDim.new(0, 8)
-uiCornerColl.Parent = collectionButton
+local c2 = Instance.new("UICorner")
+c2.CornerRadius = UDim.new(0, 8)
+c2.Parent = collectBtn
 
-collectionButton.MouseButton1Click:Connect(function()
-    if AutoConfig.collection_mode == "ALL" then
-        AutoConfig.collection_mode = "IMPORTANT"
-        collectionButton.Text = "collection: IMPORTANT"
-        collectionButton.BackgroundColor3 = Color3.fromRGB(100, 100, 35)
-        print("[syle dex gui] Collection Mode: IMPORTANT (Capsules & Event Items Only)")
-    elseif AutoConfig.collection_mode == "IMPORTANT" then
-        AutoConfig.collection_mode = "OFF"
-        collectionButton.Text = "collection: OFF"
-        collectionButton.BackgroundColor3 = Color3.fromRGB(100, 35, 35)
-        print("[syle dex gui] Collection Mode: OFF (Machines & Elevator Only)")
+collectBtn.MouseButton1Click:Connect(function()
+    if Config.CollectionMode == "IMPORTANT" then
+        Config.CollectionMode = "ALL"
+        collectBtn.Text = "Mode: ALL LOOT"
+        collectBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 180)
+    elseif Config.CollectionMode == "ALL" then
+        Config.CollectionMode = "OFF"
+        collectBtn.Text = "Mode: MACHINES ONLY"
+        collectBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
     else
-        AutoConfig.collection_mode = "ALL"
-        collectionButton.Text = "collection: ALL"
-        collectionButton.BackgroundColor3 = Color3.fromRGB(35, 100, 35)
-        print("[syle dex gui] Collection Mode: ALL (Collecting Everything)")
+        Config.CollectionMode = "IMPORTANT"
+        collectBtn.Text = "Mode: IMPORTANT ONLY"
+        collectBtn.BackgroundColor3 = Color3.fromRGB(180, 130, 0)
     end
 end)
+
+-- Status Panel
+local statusBox = Instance.new("TextLabel")
+statusBox.Size = UDim2.new(0, 180, 0, 36)
+statusBox.Position = UDim2.new(0, 10, 0, 126)
+statusBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+statusBox.TextColor3 = Color3.fromRGB(180, 180, 200)
+statusBox.TextSize = 11
+statusBox.Font = Enum.Font.Gotham
+statusBox.Text = "Status: Idle | Floor 1"
+statusBox.Parent = mainFrame
+
+local c3 = Instance.new("UICorner")
+c3.CornerRadius = UDim.new(0, 8)
+c3.Parent = statusBox
 
 -- 3. End Run Button
-local endRunButton = Instance.new("TextButton")
-endRunButton.Name = "EndRunButton"
-endRunButton.Size = UDim2.new(0, 140, 0, 34)
-endRunButton.Position = UDim2.new(0, 10, 0, 120)
-endRunButton.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-endRunButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-endRunButton.TextSize = 14
-endRunButton.Font = Enum.Font.GothamBold
-endRunButton.Text = "end run"
-endRunButton.Parent = mainFrame
+local endBtn = Instance.new("TextButton")
+endBtn.Size = UDim2.new(0, 180, 0, 32)
+endBtn.Position = UDim2.new(0, 10, 0, 168)
+endBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+endBtn.TextColor3 = Color3.fromRGB(200, 70, 70)
+endBtn.TextSize = 12
+endBtn.Font = Enum.Font.GothamBold
+endBtn.Text = "Close Script"
+endBtn.Parent = mainFrame
 
-local uiCorner2 = Instance.new("UICorner")
-uiCorner2.CornerRadius = UDim.new(0, 8)
-uiCorner2.Parent = endRunButton
+local c4 = Instance.new("UICorner")
+c4.CornerRadius = UDim.new(0, 8)
+c4.Parent = endBtn
 
-endRunButton.MouseButton1Click:Connect(function()
-    AutoConfig.running = false
-    toggleNoclip(false)
-    print("[syle dex gui] Ending run and cleaning up...")
+endBtn.MouseButton1Click:Connect(function()
+    Config.Running = false
+    setNoclip(false)
     screenGui:Destroy()
 end)
 
--- Short-Range Micro-Teleportation
-local function moveToTarget(targetPosition, surfaceMode)
-    local character = player.Character
-    if not character or not AutoConfig.running or AutoConfig.is_hiding then return false end
-    
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return false end
+-- Helpers & Movement
+local function tpTo(pos, surface)
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return false end
 
-    local targetY = surfaceMode and (targetPosition.Y + 3) or (targetPosition.Y - AutoConfig.underground_depth)
-    local destination = Vector3.new(targetPosition.X, targetY, targetPosition.Z)
-
-    local startPos = rootPart.Position
-    local distance = (startPos - destination).Magnitude
-    local steps = math.clamp(math.floor(distance / 15), 2, 10)
-    
-    for i = 1, steps do
-        if not AutoConfig.running or AutoConfig.is_hiding then return false end
-        rootPart.CFrame = CFrame.new(startPos:Lerp(destination, i / steps))
-        task.wait(0.01)
-    end
-    
-    rootPart.CFrame = CFrame.new(destination)
+    local targetY = surface and (pos.Y + 3.2) or (pos.Y - Config.UndergroundDepth)
+    char.HumanoidRootPart.CFrame = CFrame.new(pos.X, targetY, pos.Z)
+    task.wait(0.03)
     return true
 end
 
--- Emergency Underground Hide
-local function hideUnderground()
-    local character = player.Character
-    if not character then return end
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
+local function isThreatNear()
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return false end
+    local root = char.HumanoidRootPart
 
-    AutoConfig.is_hiding = true
-    print("[Safety] Twisted spotted! Burrowing deeper...")
-
-    rootPart.CFrame = rootPart.CFrame - Vector3.new(0, AutoConfig.underground_depth, 0)
-    task.wait(10)
-
-    AutoConfig.is_hiding = false
-    print("[Safety] Resuming run.")
-end
-
--- Threat Check
-local function checkThreats()
-    local character = player.Character
-    if not character then return false end
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return false end
-
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") then
-            local name = obj.Name:lower()
-            if name:find("twisted") then
-                local enemyPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-                if enemyPart then
-                    local flatPlayerPos = Vector3.new(rootPart.Position.X, 0, rootPart.Position.Z)
-                    local flatEnemyPos = Vector3.new(enemyPart.Position.X, 0, enemyPart.Position.Z)
-                    if (flatPlayerPos - flatEnemyPos).Magnitude < 40 then
-                        return true
-                    end
+    for _, v in ipairs(Workspace:GetDescendants()) do
+        if v:IsA("Model") and v.Name:lower():find("twisted") then
+            local ePart = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
+            if ePart then
+                local dist = (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(ePart.Position.X, 0, ePart.Position.Z)).Magnitude
+                if dist <= Config.ThreatRadius then
+                    return true
                 end
             end
         end
@@ -242,159 +208,113 @@ local function checkThreats()
     return false
 end
 
--- Entity Scanner
-local function getGameObjects()
-    local objects = { event_items = {}, capsules = {}, tapes_and_items = {}, healing = {}, machines = {}, elevator = nil }
-
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") or obj:IsA("BasePart") then
-            local name = obj.Name:lower()
-            local targetPart = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-
-            if targetPart then
-                if name:find("event") or name:find("token") or name:find("ticket") or name:find("present") or name:find("candy") or name:find("ornament") or name:find("gift") then
-                    table.insert(objects.event_items, targetPart)
-                elseif name:find("capsule") then
-                    table.insert(objects.capsules, targetPart)
-                elseif name:find("ichor") or name:find("tape") or name:find("item") then
-                    table.insert(objects.tapes_and_items, targetPart)
-                elseif name:find("medkit") or name:find("bandage") then
-                    table.insert(objects.healing, targetPart)
-                elseif name:find("machine") or name:find("generator") or name:find("extractor") then
-                    table.insert(objects.machines, targetPart)
-                elseif name:find("elevator") or name:find("exit") then
-                    objects.elevator = targetPart
-                end
-            end
-        end
-    end
-    return objects
+local function triggerLockdown()
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    statusBox.Text = "Status: ⚠️ THREAT NEAR - HIDING"
+    char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame - Vector3.new(0, Config.UndergroundDepth, 0)
+    task.wait(Config.HideDuration)
 end
 
--- Item Handler
-local function processItem(item)
-    if item and item.Parent then
-        moveToTarget(item.Position, false)
-        moveToTarget(item.Position, true)
-        local prompt = item:FindFirstChildWhichIsA("ProximityPrompt") or item.Parent:FindFirstChildWhichIsA("ProximityPrompt")
-        if prompt then
-            pcall(function() fireproximityprompt(prompt) end)
-        end
-        task.wait(0.1)
-        moveToTarget(item.Position, false)
-    end
+local function interact(instance)
+    if not instance then return end
+    local prompt = instance:FindFirstChildWhichIsA("ProximityPrompt", true) or (instance.Parent and instance.Parent:FindFirstChildWhichIsA("ProximityPrompt", true))
+    if prompt then pcall(function() fireproximityprompt(prompt) end) end
 end
 
--- 100% Automatic Skill Check Solver
-local function solveSkillChecks()
-    local startTime = tick()
-    while tick() - startTime < 6 and AutoConfig.running do
-        if checkThreats() then break end
-        
+local function solveSkillCheck(maxDur)
+    local start = tick()
+    while (tick() - start) < (maxDur or 6) and Config.Running do
+        if isThreatNear() then return false end
         for _, gui in ipairs(playerGui:GetDescendants()) do
             if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-                local gName = gui.Name:lower()
+                local name = gui.Name:lower()
                 local text = gui:IsA("TextButton") and gui.Text:lower() or ""
-                
-                if gName:find("skill") or gName:find("check") or gName:find("click") or gName:find("target") or text:find("click") or text:find("space") then
+                if name:find("skill") or name:find("check") or name:find("click") or text:find("click") or text:find("space") then
                     pcall(function()
-                        for _, connection in ipairs(getconnections(gui.MouseButton1Click)) do
-                            connection:Fire()
-                        end
+                        for _, conn in ipairs(getconnections(gui.MouseButton1Click)) do conn:Fire() end
                         gui.Activated:Fire()
                     end)
                 end
             end
         end
-        task.wait(0.1)
+        task.wait(0.08)
     end
+    return true
 end
 
--- Main Gameplay Loop
-local function startLoop()
-    task.spawn(function()
-        while true do
-            while not AutoConfig.running do task.wait(0.5) end
-            
-            if checkThreats() then hideUnderground() end
-
-            print("[syle dex gui] Entering Floor " .. AutoConfig.current_floor)
-            local objects = getGameObjects()
-
-            -- Collection Mode Handling
-            if AutoConfig.collection_mode == "ALL" then
-                -- Collect Everything
-                for _, item in ipairs(objects.event_items) do
-                    if not AutoConfig.running then break end
-                    while checkThreats() do hideUnderground() end
-                    processItem(item)
-                end
-                for _, item in ipairs(objects.capsules) do
-                    if not AutoConfig.running then break end
-                    while checkThreats() do hideUnderground() end
-                    processItem(item)
-                end
-                for _, item in ipairs(objects.tapes_and_items) do
-                    if not AutoConfig.running then break end
-                    while checkThreats() do hideUnderground() end
-                    processItem(item)
-                end
-                for _, item in ipairs(objects.healing) do
-                    if not AutoConfig.running then break end
-                    while checkThreats() do hideUnderground() end
-                    processItem(item)
-                end
-
-            elseif AutoConfig.collection_mode == "IMPORTANT" then
-                -- Collect ONLY Capsules and Event Items
-                for _, item in ipairs(objects.event_items) do
-                    if not AutoConfig.running then break end
-                    while checkThreats() do hideUnderground() end
-                    processItem(item)
-                end
-                for _, item in ipairs(objects.capsules) do
-                    if not AutoConfig.running then break end
-                    while checkThreats() do hideUnderground() end
-                    processItem(item)
-                end
-            end
-            -- If mode is "OFF", skips all item gathering entirely.
-
-            -- Machines (Always run, uses 100% auto-skill check solver)
-            for _, mach in ipairs(objects.machines) do
-                if not AutoConfig.running then break end
-                while checkThreats() do hideUnderground() end
-
-                if mach and mach.Parent then
-                    moveToTarget(mach.Position, false)
-                    moveToTarget(mach.Position, true)
-                    local prompt = mach:FindFirstChildWhichIsA("ProximityPrompt") or mach.Parent:FindFirstChildWhichIsA("ProximityPrompt")
-                    if prompt then
-                        pcall(function() fireproximityprompt(prompt) end)
-                    end
-                    
-                    solveSkillChecks()
-                    moveToTarget(mach.Position, false)
-                end
-            end
-
-            -- Elevator Escape
-            if objects.elevator and AutoConfig.running then
-                while checkThreats() do hideUnderground() end
-                
-                moveToTarget(objects.elevator.Position, false)
-                moveToTarget(objects.elevator.Position, true)
-                
-                local prompt = objects.elevator:FindFirstChildWhichIsA("ProximityPrompt") or objects.elevator.Parent:FindFirstChildWhichIsA("ProximityPrompt")
-                if prompt then
-                    pcall(function() fireproximityprompt(prompt) end)
-                end
-                AutoConfig.current_floor = AutoConfig.current_floor + 1
-            end
-
-            task.wait(2)
+local function scanMap()
+    local map = { Machines = {}, Capsules = {}, EventItems = {}, OtherLoot = {}, Elevator = nil }
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        local name = obj.Name:lower()
+        local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or (obj:IsA("BasePart") and obj or nil)
+        if part then
+            if name:find("machine") or name:find("generator") or name:find("extractor") then table.insert(map.Machines, part)
+            elseif name:find("capsule") then table.insert(map.Capsules, part)
+            elseif name:find("event") or name:find("token") or name:find("ticket") or name:find("present") or name:find("candy") or name:find("ornament") then table.insert(map.EventItems, part)
+            elseif name:find("tape") or name:find("ichor") or name:find("medkit") or name:find("bandage") then table.insert(map.OtherLoot, part)
+            elseif name:find("elevator") or name:find("exit") then map.Elevator = part end
         end
-    end)
+    end
+    return map
 end
 
-startLoop()
+local function processTarget(part)
+    if not part or not part.Parent or not Config.Running then return end
+    if isThreatNear() then triggerLockdown() return end
+    tpTo(part.Position, false)
+    tpTo(part.Position, true)
+    interact(part)
+    task.wait(0.15)
+    tpTo(part.Position, false)
+end
+
+-- Main Loop
+task.spawn(function()
+    while true do
+        while not Config.Running do task.wait(0.5) end
+        statusBox.Text = "Status: Scanning Floor " .. Config.CurrentFloor
+
+        if isThreatNear() then triggerLockdown() end
+        local map = scanMap()
+
+        -- Machines
+        for _, mach in ipairs(map.Machines) do
+            if not Config.Running then break end
+            if isThreatNear() then triggerLockdown() end
+            if mach and mach.Parent then
+                statusBox.Text = "Status: Completing Machine"
+                tpTo(mach.Position, false)
+                tpTo(mach.Position, true)
+                interact(mach)
+                solveSkillCheck(7)
+                tpTo(mach.Position, false)
+            end
+        end
+
+        -- Collection
+        if Config.CollectionMode == "IMPORTANT" or Config.CollectionMode == "ALL" then
+            statusBox.Text = "Status: Collecting Important Items"
+            for _, cap in ipairs(map.Capsules) do if not Config.Running or isThreatNear() then break end processTarget(cap) end
+            for _, evt in ipairs(map.EventItems) do if not Config.Running or isThreatNear() then break end processTarget(evt) end
+        end
+
+        if Config.CollectionMode == "ALL" then
+            statusBox.Text = "Status: Collecting All Items"
+            for _, loot in ipairs(map.OtherLoot) do if not Config.Running or isThreatNear() then break end processTarget(loot) end
+        end
+
+        -- Elevator
+        if map.Elevator and Config.Running then
+            statusBox.Text = "Status: Exiting Floor"
+            if isThreatNear() then triggerLockdown() end
+            tpTo(map.Elevator.Position, false)
+            tpTo(map.Elevator.Position, true)
+            interact(map.Elevator)
+            task.wait(1)
+            Config.CurrentFloor = Config.CurrentFloor + 1
+        end
+
+        task.wait(1.5)
+    end
+end)
