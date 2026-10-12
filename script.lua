@@ -1,30 +1,29 @@
 -- Services
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
--- Dandy's World Automation Settings
+-- Automation Settings
 local AutoConfig = {
     running = false,
+    collection_mode = "ALL", -- Options: "ALL", "IMPORTANT", "OFF"
     current_floor = 1,
-    tween_speed = 20, -- Safe studs per second walking speed equivalent
     is_hiding = false,
-    underground_depth = 10, -- Depth in studs below surface
+    underground_depth = 12,
 }
 
 -- Anti-AFK Protection
 player.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
-    print("[Anti-AFK] Idle kick blocked.")
 end)
 
--- Safe Client Noclip
+-- Robust Bulletproof Noclip
 local noclipConnection = nil
 local function toggleNoclip(state)
     if state then
@@ -32,8 +31,12 @@ local function toggleNoclip(state)
         noclipConnection = RunService.Stepped:Connect(function()
             if AutoConfig.running and player.Character then
                 for _, part in ipairs(player.Character:GetDescendants()) do
-                    if part:IsA("BasePart") and part.CanCollide then
+                    if part:IsA("BasePart") then
                         part.CanCollide = false
+                        if part.Name == "HumanoidRootPart" then
+                            part.AssemblyLinearVelocity = Vector3.zero
+                            part.AssemblyAngularVelocity = Vector3.zero
+                        end
                     end
                 end
             end
@@ -55,13 +58,13 @@ local success = pcall(function()
     screenGui.Parent = CoreGui
 end)
 if not success then
-    screenGui.Parent = player:WaitForChild("PlayerGui")
+    screenGui.Parent = playerGui
 end
 
 -- Main Container Frame
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 160, 0, 140)
+mainFrame.Size = UDim2.new(0, 160, 0, 165)
 mainFrame.Position = UDim2.new(0, 20, 0, 50)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.BorderSizePixel = 0
@@ -83,10 +86,10 @@ titleLabel.TextSize = 16
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Parent = mainFrame
 
--- 1. Toggle Button
+-- 1. Autofarm Toggle Button
 local toggleButton = Instance.new("TextButton")
 toggleButton.Name = "ToggleButton"
-toggleButton.Size = UDim2.new(0, 140, 0, 38)
+toggleButton.Size = UDim2.new(0, 140, 0, 34)
 toggleButton.Position = UDim2.new(0, 10, 0, 40)
 toggleButton.BackgroundColor3 = Color3.fromRGB(120, 30, 30)
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -105,7 +108,7 @@ toggleButton.MouseButton1Click:Connect(function()
         toggleButton.Text = "autofarm ON"
         toggleButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
         toggleNoclip(true)
-        print("[syle dex gui] Dandy's World Underground Autofarm Enabled")
+        print("[syle dex gui] Underground Autofarm Enabled")
     else
         toggleButton.Text = "autofarm OFF"
         toggleButton.BackgroundColor3 = Color3.fromRGB(120, 30, 30)
@@ -114,11 +117,46 @@ toggleButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- 2. End Run Button
+-- 2. Collection Mode Cycle Button (ALL -> IMPORTANT -> OFF)
+local collectionButton = Instance.new("TextButton")
+collectionButton.Name = "CollectionButton"
+collectionButton.Size = UDim2.new(0, 140, 0, 34)
+collectionButton.Position = UDim2.new(0, 10, 0, 80)
+collectionButton.BackgroundColor3 = Color3.fromRGB(35, 100, 35)
+collectionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+collectionButton.TextSize = 12
+collectionButton.Font = Enum.Font.GothamBold
+collectionButton.Text = "collection: ALL"
+collectionButton.Parent = mainFrame
+
+local uiCornerColl = Instance.new("UICorner")
+uiCornerColl.CornerRadius = UDim.new(0, 8)
+uiCornerColl.Parent = collectionButton
+
+collectionButton.MouseButton1Click:Connect(function()
+    if AutoConfig.collection_mode == "ALL" then
+        AutoConfig.collection_mode = "IMPORTANT"
+        collectionButton.Text = "collection: IMPORTANT"
+        collectionButton.BackgroundColor3 = Color3.fromRGB(100, 100, 35)
+        print("[syle dex gui] Collection Mode: IMPORTANT (Capsules & Event Items Only)")
+    elseif AutoConfig.collection_mode == "IMPORTANT" then
+        AutoConfig.collection_mode = "OFF"
+        collectionButton.Text = "collection: OFF"
+        collectionButton.BackgroundColor3 = Color3.fromRGB(100, 35, 35)
+        print("[syle dex gui] Collection Mode: OFF (Machines & Elevator Only)")
+    else
+        AutoConfig.collection_mode = "ALL"
+        collectionButton.Text = "collection: ALL"
+        collectionButton.BackgroundColor3 = Color3.fromRGB(35, 100, 35)
+        print("[syle dex gui] Collection Mode: ALL (Collecting Everything)")
+    end
+end)
+
+-- 3. End Run Button
 local endRunButton = Instance.new("TextButton")
 endRunButton.Name = "EndRunButton"
-endRunButton.Size = UDim2.new(0, 140, 0, 38)
-endRunButton.Position = UDim2.new(0, 10, 0, 88)
+endRunButton.Size = UDim2.new(0, 140, 0, 34)
+endRunButton.Position = UDim2.new(0, 10, 0, 120)
 endRunButton.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
 endRunButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 endRunButton.TextSize = 14
@@ -137,37 +175,32 @@ endRunButton.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
--- Underground & Surface Movement Handler
-local function moveToPosition(targetPosition, surfaceMode)
+-- Short-Range Micro-Teleportation
+local function moveToTarget(targetPosition, surfaceMode)
     local character = player.Character
     if not character or not AutoConfig.running or AutoConfig.is_hiding then return false end
     
     local rootPart = character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not rootPart or not humanoid then return false end
+    if not rootPart then return false end
 
-    local yOffset = surfaceMode and 3 or -AutoConfig.underground_depth
-    local finalPos = Vector3.new(targetPosition.X, targetPosition.Y + yOffset, targetPosition.Z)
+    local targetY = surfaceMode and (targetPosition.Y + 3) or (targetPosition.Y - AutoConfig.underground_depth)
+    local destination = Vector3.new(targetPosition.X, targetY, targetPosition.Z)
 
-    local distance = (rootPart.Position - finalPos).Magnitude
-    local duration = distance / AutoConfig.tween_speed
-    if duration < 0.2 then duration = 0.2 end
-
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = CFrame.new(finalPos)})
+    local startPos = rootPart.Position
+    local distance = (startPos - destination).Magnitude
+    local steps = math.clamp(math.floor(distance / 15), 2, 10)
     
-    tween:Play()
-    while tween.PlaybackState == Enum.PlaybackState.Playing do
-        if not AutoConfig.running or AutoConfig.is_hiding then
-            tween:Cancel()
-            return false
-        end
-        task.wait(0.05)
+    for i = 1, steps do
+        if not AutoConfig.running or AutoConfig.is_hiding then return false end
+        rootPart.CFrame = CFrame.new(startPos:Lerp(destination, i / steps))
+        task.wait(0.01)
     end
+    
+    rootPart.CFrame = CFrame.new(destination)
     return true
 end
 
--- Emergency Underground Safety Pause
+-- Emergency Underground Hide
 local function hideUnderground()
     local character = player.Character
     if not character then return end
@@ -175,16 +208,16 @@ local function hideUnderground()
     if not rootPart then return end
 
     AutoConfig.is_hiding = true
-    print("[Safety] Twisted spotted nearby! Staying deep underground...")
+    print("[Safety] Twisted spotted! Burrowing deeper...")
 
     rootPart.CFrame = rootPart.CFrame - Vector3.new(0, AutoConfig.underground_depth, 0)
     task.wait(10)
 
     AutoConfig.is_hiding = false
-    print("[Safety] 10 seconds elapsed. Resuming run.")
+    print("[Safety] Resuming run.")
 end
 
--- Horizontal Twisted Threat Check
+-- Threat Check
 local function checkThreats()
     local character = player.Character
     if not character then return false end
@@ -199,9 +232,7 @@ local function checkThreats()
                 if enemyPart then
                     local flatPlayerPos = Vector3.new(rootPart.Position.X, 0, rootPart.Position.Z)
                     local flatEnemyPos = Vector3.new(enemyPart.Position.X, 0, enemyPart.Position.Z)
-                    local dist = (flatPlayerPos - flatEnemyPos).Magnitude
-
-                    if dist < 40 then
+                    if (flatPlayerPos - flatEnemyPos).Magnitude < 40 then
                         return true
                     end
                 end
@@ -211,15 +242,9 @@ local function checkThreats()
     return false
 end
 
--- Dandy's World Accurate Object Scanner
+-- Entity Scanner
 local function getGameObjects()
-    local objects = { 
-        event_items = {},
-        rarities_and_capsules = {}, 
-        healing_items = {}, 
-        machines = {}, 
-        elevator = nil 
-    }
+    local objects = { event_items = {}, capsules = {}, tapes_and_items = {}, healing = {}, machines = {}, elevator = nil }
 
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("Model") or obj:IsA("BasePart") then
@@ -227,19 +252,16 @@ local function getGameObjects()
             local targetPart = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
 
             if targetPart then
-                -- 1. Event / Special Spawns (Tickets, Tokens, Presents, Candies, Ornaments)
                 if name:find("event") or name:find("token") or name:find("ticket") or name:find("present") or name:find("candy") or name:find("ornament") or name:find("gift") then
                     table.insert(objects.event_items, targetPart)
-                -- 2. Currency, Research Capsules, Tapes, and Standard Items
-                elseif name:find("ichor") or name:find("capsule") or name:find("tape") or name:find("item") then
-                    table.insert(objects.rarities_and_capsules, targetPart)
-                -- 3. Healing (Medkits, Bandages)
+                elseif name:find("capsule") then
+                    table.insert(objects.capsules, targetPart)
+                elseif name:find("ichor") or name:find("tape") or name:find("item") then
+                    table.insert(objects.tapes_and_items, targetPart)
                 elseif name:find("medkit") or name:find("bandage") then
-                    table.insert(objects.healing_items, targetPart)
-                -- 4. Machine Extractors / Generators
+                    table.insert(objects.healing, targetPart)
                 elseif name:find("machine") or name:find("generator") or name:find("extractor") then
                     table.insert(objects.machines, targetPart)
-                -- 5. Floor Escape Elevator
                 elseif name:find("elevator") or name:find("exit") then
                     objects.elevator = targetPart
                 end
@@ -249,17 +271,42 @@ local function getGameObjects()
     return objects
 end
 
--- Helper to handle underground navigation and item pickup
-local function collectItem(item)
+-- Item Handler
+local function processItem(item)
     if item and item.Parent then
-        moveToPosition(item.Position, false) -- Underground travel
-        moveToPosition(item.Position, true)  -- Brief surface pop-up
+        moveToTarget(item.Position, false)
+        moveToTarget(item.Position, true)
         local prompt = item:FindFirstChildWhichIsA("ProximityPrompt") or item.Parent:FindFirstChildWhichIsA("ProximityPrompt")
         if prompt then
             pcall(function() fireproximityprompt(prompt) end)
         end
-        task.wait(0.2)
-        moveToPosition(item.Position, false) -- Dive back underground
+        task.wait(0.1)
+        moveToTarget(item.Position, false)
+    end
+end
+
+-- 100% Automatic Skill Check Solver
+local function solveSkillChecks()
+    local startTime = tick()
+    while tick() - startTime < 6 and AutoConfig.running do
+        if checkThreats() then break end
+        
+        for _, gui in ipairs(playerGui:GetDescendants()) do
+            if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+                local gName = gui.Name:lower()
+                local text = gui:IsA("TextButton") and gui.Text:lower() or ""
+                
+                if gName:find("skill") or gName:find("check") or gName:find("click") or gName:find("target") or text:find("click") or text:find("space") then
+                    pcall(function()
+                        for _, connection in ipairs(getconnections(gui.MouseButton1Click)) do
+                            connection:Fire()
+                        end
+                        gui.Activated:Fire()
+                    end)
+                end
+            end
+        end
+        task.wait(0.1)
     end
 end
 
@@ -269,57 +316,74 @@ local function startLoop()
         while true do
             while not AutoConfig.running do task.wait(0.5) end
             
-            if checkThreats() then
-                hideUnderground()
-            end
+            if checkThreats() then hideUnderground() end
 
             print("[syle dex gui] Entering Floor " .. AutoConfig.current_floor)
             local objects = getGameObjects()
 
-            -- Step 1: Priority Event Items (Candy, Tokens, Tickets, Presents)
-            for _, item in ipairs(objects.event_items) do
-                if not AutoConfig.running then break end
-                while checkThreats() do hideUnderground() end
-                collectItem(item)
-            end
+            -- Collection Mode Handling
+            if AutoConfig.collection_mode == "ALL" then
+                -- Collect Everything
+                for _, item in ipairs(objects.event_items) do
+                    if not AutoConfig.running then break end
+                    while checkThreats() do hideUnderground() end
+                    processItem(item)
+                end
+                for _, item in ipairs(objects.capsules) do
+                    if not AutoConfig.running then break end
+                    while checkThreats() do hideUnderground() end
+                    processItem(item)
+                end
+                for _, item in ipairs(objects.tapes_and_items) do
+                    if not AutoConfig.running then break end
+                    while checkThreats() do hideUnderground() end
+                    processItem(item)
+                end
+                for _, item in ipairs(objects.healing) do
+                    if not AutoConfig.running then break end
+                    while checkThreats() do hideUnderground() end
+                    processItem(item)
+                end
 
-            -- Step 2: Research Capsules, Tapes, and Ichor/Items
-            for _, item in ipairs(objects.rarities_and_capsules) do
-                if not AutoConfig.running then break end
-                while checkThreats() do hideUnderground() end
-                collectItem(item)
+            elseif AutoConfig.collection_mode == "IMPORTANT" then
+                -- Collect ONLY Capsules and Event Items
+                for _, item in ipairs(objects.event_items) do
+                    if not AutoConfig.running then break end
+                    while checkThreats() do hideUnderground() end
+                    processItem(item)
+                end
+                for _, item in ipairs(objects.capsules) do
+                    if not AutoConfig.running then break end
+                    while checkThreats() do hideUnderground() end
+                    processItem(item)
+                end
             end
+            -- If mode is "OFF", skips all item gathering entirely.
 
-            -- Step 3: Healing Items (Medkits & Bandages)
-            for _, item in ipairs(objects.healing_items) do
-                if not AutoConfig.running then break end
-                while checkThreats() do hideUnderground() end
-                collectItem(item)
-            end
-
-            -- Step 4: Machine Extractors (Pop up to surface to complete)
+            -- Machines (Always run, uses 100% auto-skill check solver)
             for _, mach in ipairs(objects.machines) do
                 if not AutoConfig.running then break end
                 while checkThreats() do hideUnderground() end
 
                 if mach and mach.Parent then
-                    moveToPosition(mach.Position, false)
-                    moveToPosition(mach.Position, true) -- Pop up to surface at machine
+                    moveToTarget(mach.Position, false)
+                    moveToTarget(mach.Position, true)
                     local prompt = mach:FindFirstChildWhichIsA("ProximityPrompt") or mach.Parent:FindFirstChildWhichIsA("ProximityPrompt")
                     if prompt then
                         pcall(function() fireproximityprompt(prompt) end)
                     end
-                    task.wait(1.5)
-                    moveToPosition(mach.Position, false) -- Submerge back underground
+                    
+                    solveSkillChecks()
+                    moveToTarget(mach.Position, false)
                 end
             end
 
-            -- Step 5: Escape via Floor Elevator
+            -- Elevator Escape
             if objects.elevator and AutoConfig.running then
                 while checkThreats() do hideUnderground() end
                 
-                moveToPosition(objects.elevator.Position, false)
-                moveToPosition(objects.elevator.Position, true)
+                moveToTarget(objects.elevator.Position, false)
+                moveToTarget(objects.elevator.Position, true)
                 
                 local prompt = objects.elevator:FindFirstChildWhichIsA("ProximityPrompt") or objects.elevator.Parent:FindFirstChildWhichIsA("ProximityPrompt")
                 if prompt then
